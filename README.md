@@ -25,7 +25,7 @@ This is a simple Python FastAPI server with the following main functionalities:
 
   Then copy `.env.example` to `.env` in the project root directory, and modify the following content, which is variable information:
 
-  | `BASE_URL`       | Must end with "/" Default is `https://generativeai.googleapi.com/` Required. |
+  | `BASE_URL`       | Must end with "/" Default is `https://generativelanguage.googleapis.com/` Required. |
   | ---------------- | ------------------------------------------------------------ |
   | `OPENAI_API_KEY` | Deprecated, no effect, meaning any apiKey you fill in when requesting is irrelevant. |
   | `GEMINI_API_KEY` | Required, used for requesting Gemini API.                    |

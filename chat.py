@@ -6,7 +6,7 @@ from dotenv import load_dotenv
 import os
 load_dotenv()
 gemini_api_key = os.getenv("GEMINI_API_KEY")
-base_url = os.getenv("BASE_URL") or "https://generativeai.googleapis.com/"
+base_url = os.getenv("BASE_URL") or "https://generativelanguage.googleapis.com/"
 safetySettings_threhold = "BLOCK_NONE" # Set the safety settings threshold for the Google GenAI API
 safetySettings = [
     {

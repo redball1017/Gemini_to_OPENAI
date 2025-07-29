@@ -25,7 +25,7 @@
 
   然后填写复制项目根目录下的`.env.example`到`.env`，并修改以下内容，这是变量信息：
 
-  | `BASE_URL`       | 结尾必须存在"/" 默认为`https://generativeai.googleapi.com/` 必填 |
+  | `BASE_URL`       | 结尾必须存在"/" 默认为`https://generativelanguage.googleapis.com/` 必填 |
   | ---------------- | ------------------------------------------------------------ |
   | `OPENAI_API_KEY` | 已废弃，没作用，也就是说你请求时填什么apiKey都无所谓         |
   | `GEMINI_API_KEY` | 用于请求Gemini API时候用的key 必填                           |
