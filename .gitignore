@@ -1,0 +1,9 @@
+.env
+.vscode
+.idea
+.pytest_cache
+__pycache__
+Include/
+Lib/
+Scripts/
+pyenv.cfg
