@@ -8,7 +8,7 @@ load_dotenv()
 app = FastAPI()
 class ChatMessage(BaseModel):
 
-    role: Literal["system", "user", "assistant"]
+    role: Optional[str] = None
     content: str
 
 # 这个模型对应整个JSON请求。 
@@ -165,8 +165,11 @@ async def chat_completions(openai_request: ChatCompletionRequest):
     system_instruction = None
     for message in openai_request.messages: # 遍历请求中的消息 Traverse the messages in the request
         if message.role == "system":
-            system_instruction = GeminiContent(role= None, parts=[GeminiPart(text=message.content)]) # 如果为系统消息，则创建系统提示的GeminiContent. If the message is a system message, create a GeminiContent for the system prompt
-            continue
+            if "gemma" in openai_request.model.lower():
+                continue # 如果模型名称中包含gemma，则不创建系统提示的GeminiContent. If the model name contains gemma, do not create a GeminiContent for the system prompt
+            else:
+                system_instruction = GeminiContent(role= None, parts=[GeminiPart(text=message.content)]) # 如果为系统消息，则创建系统提示的GeminiContent. If the message is a system message, create a GeminiContent for the system prompt
+                continue
         elif message.role == "user": # 如果为用户消息，则创建用户消息的GeminiContent. If the message is a user message, create a GeminiContent for the user message
             gemini_role = "user"
         elif message.role == "assistant": # 如果为assistant消息，则创建model消息的GeminiContent. if the message is an assistant message, create a GeminiContent for the model message
