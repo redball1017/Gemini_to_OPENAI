@@ -1,6 +1,6 @@
 from fastapi import FastAPI, Header, HTTPException, status
 from typing import Annotated, Union, List, Literal, Optional
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, RootModel
 import chat
 from dotenv import load_dotenv
 import time
@@ -8,7 +8,7 @@ load_dotenv()
 app = FastAPI()
 class ChatMessage(BaseModel):
 
-    role: Literal["system", "user", "assistant"]
+    role: Optional[str] = None
     content: str
 
 # 这个模型对应整个JSON请求。 
@@ -35,8 +35,12 @@ class GenerationConfig(BaseModel):
     max_output_tokens: Optional[int] = None
     top_p: Optional[float] = None
 
+# Gemini API 安全设置模型
+# Gemini API safety settings model
+safetySettings_threhold = "BLOCK_NONE" # Set the safety settings threshold for the Google GenAI API
+safetySettings_categories = ["HARM_CATEGORY_HARASSMENT", "HARM_CATEGORY_HATE_SPEECH", "HARM_CATEGORY_SEXUALLY_EXPLICIT", "HARM_CATEGORY_CIVIC_INTEGRITY", "HARM_CATEGORY_DANGEROUS_CONTENT"]
 class GeminiChatRequest(BaseModel):
-
+    safety_settings: Optional[List] = None
     contents: List[GeminiContent]
     system_instruction: Optional[GeminiContent] = None
     generation_config: Optional[GenerationConfig] = None
@@ -114,7 +118,6 @@ class GeminiModelsData(BaseModel):
     topK : Optional[int] = None
 class GeminiModel(BaseModel):
     models: List[GeminiModelsData]
-
 # 构建Gemini API 响应 转换为 OpenAI API 响应的函数
 # Build a function that converts Gemini API responses to OpenAI API responses
 def convert_gemini_to_openai(gemini_response, model) -> OpenAIChatCompletionResponse:
@@ -152,7 +155,7 @@ def gemini_getModel_to_OPENAI(gemini_response) -> OpenAIModel:
             id=GeminiModel.name.replace("models/", ""),
             object="model",
             created=int(time.time()),
-            owned_by="openai"
+            owned_by="google"
         ))
     return OpenAIModel(
         object= "list",
@@ -163,10 +166,14 @@ def gemini_getModel_to_OPENAI(gemini_response) -> OpenAIModel:
 async def chat_completions(openai_request: ChatCompletionRequest):
     gemini_contents = []
     system_instruction = None
+    safetySettings = []
     for message in openai_request.messages: # 遍历请求中的消息 Traverse the messages in the request
         if message.role == "system":
-            system_instruction = GeminiContent(role= None, parts=[GeminiPart(text=message.content)]) # 如果为系统消息，则创建系统提示的GeminiContent. If the message is a system message, create a GeminiContent for the system prompt
-            continue
+            if "gemma" in openai_request.model.lower():
+                continue # 如果模型名称中包含gemma，则不创建系统提示的GeminiContent. If the model name contains gemma, do not create a GeminiContent for the system prompt
+            else:
+                system_instruction = GeminiContent(role= None, parts=[GeminiPart(text=message.content)]) # 如果为系统消息，则创建系统提示的GeminiContent. If the message is a system message, create a GeminiContent for the system prompt
+                continue
         elif message.role == "user": # 如果为用户消息，则创建用户消息的GeminiContent. If the message is a user message, create a GeminiContent for the user message
             gemini_role = "user"
         elif message.role == "assistant": # 如果为assistant消息，则创建model消息的GeminiContent. if the message is an assistant message, create a GeminiContent for the model message
@@ -177,12 +184,20 @@ async def chat_completions(openai_request: ChatCompletionRequest):
             role=gemini_role,
             parts=[GeminiPart(text=message.content)]
         ))
+    for safetySettings_category in safetySettings_categories: # 遍历安全设置，将其转换为Gemini安全设置模型，并添加到请求中 Traverse safety settings, convert them to Gemini safety settings models, and add them to the request
+        safetySettings.append(
+            {
+                "category": safetySettings_category,
+                "threshold": safetySettings_threhold
+            }
+        )
     generation_config = GenerationConfig( # 创建生成配置 Create generation configuration
         temperature=openai_request.temperature,
         max_output_tokens=None,
         top_p=None
     )
     gemini_request = GeminiChatRequest( # 创建Gemini请求 Create Gemini request
+        safety_settings=safetySettings,
         contents=gemini_contents,
         system_instruction=system_instruction,
         generation_config=generation_config
@@ -190,7 +205,7 @@ async def chat_completions(openai_request: ChatCompletionRequest):
     gemini_request_json = gemini_request.model_dump_json(exclude_none=True) # 序列化Gemini请求为JSON字符串，忽略空值 Serialize Gemini request to JSON string, ignore empty values
     #print(gemini_request_json)
     response, status_code = chat.send_request(gemini_request=gemini_request_json,model=openai_request.model) # 调用Gemini API.Use Gemini API.
-    #print(gemini_response_raw)
+    #print(response)
     if status_code != 200:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Gemini API error" + str(response)) # 如果Gemini API返回错误，则返回500错误. If Gemini API returns an error, return a 500 error.
     else:

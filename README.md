@@ -51,7 +51,7 @@ Then, `http://127.0.0.1:8000` is the OpenAI API compatible server address.
 ## To-dos
 
 - [ ] Streaming
-- [ ] Support Gemma
+- [x] Support Gemma
 - [ ] Upload File
 - [ ] Generate Files
 - [ ] Support VertexAI
